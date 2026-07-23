@@ -1,0 +1,7 @@
+{
+  "name": "LineageGuard ML Security Agent",
+  "short_name": "LineageGuard",
+  "description": "ML supply chain security agent using DataHub lineage",
+  "category": "AI agents for ML security",
+  "technologies": ["DataHub", "Python", "FastAPI", "MCP", "Local LLM"]
+}

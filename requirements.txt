@@ -1,0 +1,7 @@
+acryl-datahub
+requests
+pytest
+fastapi
+uvicorn
+streamlit
+pydantic
