@@ -117,18 +117,18 @@ class LineageGuardAgent:
         """Model version referenced in deployment differs from lineage/training."""
         model_versions = {}
         for urn, node in self.nodes.items():
-            if "mlModel" in node.type:
-                version = node.properties.get("customProperties", {}).get("version", "")
+            if "mlModel" in node.type or self._get_custom(node, "type") == "mlmodel":
+                version = self._get_custom(node, "version")
                 if version:
                     model_versions[urn] = version
 
         for urn, node in self.nodes.items():
-            if "endpoint" in node.name.lower() or "deployment" in node.name.lower():
-                deployed_version = node.properties.get("customProperties", {}).get("model_version", "")
-                # Find upstream model
+            if self._get_custom(node, "type") == "endpoint" or "endpoint" in node.name.lower():
+                deployed_version = self._get_custom(node, "model_version")
                 upstream_models = [
                     e.source for e in self.edges
-                    if e.target == urn and "mlModel" in self.nodes.get(e.source, EMPTY_NODE).type
+                    if e.target == urn and ("mlModel" in self.nodes.get(e.source, EMPTY_NODE).type
+                                            or self._get_custom(self.nodes.get(e.source, EMPTY_NODE), "type") == "mlmodel")
                 ]
                 for model_urn in upstream_models:
                     trained_version = model_versions.get(model_urn, "")
@@ -143,22 +143,34 @@ class LineageGuardAgent:
                         ))
 
     def _get_tags(self, node):
-        """Extract tags from node properties or customProperties."""
+        """Extract tags from node properties (handles both synthetic and DataHub-normalized)."""
         props = node.properties or {}
         tags = []
-        if isinstance(props.get("tags"), list):
-            tags.extend(props["tags"])
+        # DataHub-normalized: properties.tags is a list
+        raw_tags = props.get("tags", [])
+        if isinstance(raw_tags, list):
+            tags.extend(raw_tags)
+        # Synthetic fallback: customProperties.tags as JSON string
         custom = props.get("customProperties", {})
         if isinstance(custom.get("tags"), list):
             tags.extend(custom["tags"])
-        return [t.lower() for t in tags]
+        return [t.lower() for t in tags if isinstance(t, str)]
+
+    def _get_custom(self, node, key: str) -> str:
+        """Get a custom property value from node."""
+        props = node.properties or {}
+        # DataHub-normalized customProperties is a dict
+        val = props.get("customProperties", {}).get(key, "")
+        if isinstance(val, str):
+            return val
+        return ""
 
     def _check_tainted_datasets(self):
         """Detect datasets marked as tainted/poisoned."""
         for urn, node in self.nodes.items():
             tags = self._get_tags(node)
             if any(t in tags for t in ("tainted", "poisoned")):
-                downstream = [e.target for e in self.edges if e.source == urn]
+                downstream = list(dict.fromkeys(e.target for e in self.edges if e.source == urn))
                 self.anomalies.append(Anomaly(
                     type=AnomalyType.TAINTED_DATASET,
                     risk=RiskLevel.CRITICAL,
@@ -170,7 +182,7 @@ class LineageGuardAgent:
     def _check_shadow_models(self):
         """Models not registered in approved model registry."""
         for urn, node in self.nodes.items():
-            if "mlModel" in node.type:
+            if "mlModel" in node.type or self._get_custom(node, "type") == "mlmodel":
                 tags = self._get_tags(node)
                 platform = node.platform.lower()
                 if "unregistered" in platform or "shadow" in tags:
