@@ -1,98 +1,109 @@
-# LineageGuard
+# LineageGuard: ML Supply Chain Security Agent for DataHub
 
-**ML supply chain security agent for [DataHub](https://datahubproject.io/)**
-
-Catch poisoned training data, shadow models, and deployment version lies — by walking the real lineage graph.
-
-[![CI](https://github.com/RadikHoroshev/datahub-lineageguard/actions/workflows/ci.yml/badge.svg)](https://github.com/RadikHoroshev/datahub-lineageguard/actions/workflows/ci.yml)
-[License](LICENSE) · [DEMO](DEMO.md) · [Devpost draft](DEVPOST.md) · [Roadmap](ROADMAP.md)
-
----
+An AI agent that protects ML pipelines by analyzing DataHub's end-to-end lineage graph.
 
 ## Problem
 
-ML systems fail **silently**. Data poisoning, feature contamination, unregistered shadow models, and train/serve version skew can break production before dashboards alarm. Metric monitors rarely answer: *which upstream asset poisoned this model?*
+ML systems fail silently. Data poisoning, shadow models, and model-version drift propagate through pipelines undetected because the link between training data, features, models, and endpoints is invisible. DataHub makes that link visible — LineageGuard makes it actionable.
 
-## Solution
+## What it does
 
-LineageGuard is an agent that:
+LineageGuard reads the ML lineage graph from DataHub (training datasets → features → feature tables → models → deployment endpoints) and detects security and reliability anomalies:
 
-1. **Reads** end-to-end ML lineage from DataHub (GraphQL)
-2. **Detects** supply-chain anomalies:
-   - `version_mismatch` — trained vs deployed model versions diverge  
-   - `tainted_dataset` — poisoned data reaches downstream models  
-   - `shadow_model` — unregistered model outside the graph  
-   - `missing_lineage` — gaps in the chain of custody  
-3. **Reports** structured JSON + Markdown security findings  
-4. **Explains** (optional) via local LLM with graceful degradation if Ollama is down  
+- **Tainted datasets** — datasets tagged `tainted` or `poisoned` that feed production features or models
+- **Version mismatch** — deployed model version differs from the trained model version in the lineage
+- **Shadow models** — unregistered or untracked models with lineage to production assets
+- **Missing lineage** — models or feature tables with no upstream provenance
 
-## Architecture
+It outputs a structured JSON report, a human-readable Markdown explanation, and (optionally) an LLM-generated risk narrative.
 
-```text
-┌─────────────────┐     GraphQL      ┌──────────────────┐
-│  DataHub GMS    │ ───────────────► │ LineageGuard     │
-│  :8080 / UI:9002│                  │  agent.py        │
-└─────────────────┘                  │  detectors       │
-                                     └────────┬─────────┘
-                                              │
-                    ┌─────────────────────────┼─────────────────────────┐
-                    ▼                         ▼                         ▼
-              CLI report                 FastAPI :8000            Streamlit :8501
-           + Markdown MD                 /scan /health              Scan Lineage UI
-```
+## Why DataHub
+
+LineageGuard uses DataHub as the single source of truth:
+
+- Reads upstream/downstream lineage via DataHub's GraphQL API
+- Stores pipeline metadata as DataHub datasets with custom properties and tags
+- Can write security findings back into DataHub as tags, assertions, or alerts (roadmap)
+
+It targets **Challenge 3** of the [Build with DataHub: The Agent Hackathon](https://datahub.devpost.com/): *Build agents for ML teams that protect models in production.*
 
 ## Quick start
 
+### 1. Install DataHub locally
+
 ```bash
-git clone https://github.com/RadikHoroshev/datahub-lineageguard.git
-cd datahub-lineageguard
-python3 -m venv .venv && source .venv/bin/activate
+pip install acryl-datahub
+datahub docker quickstart
+```
+
+Open http://localhost:9002 and log in with `datahub` / `datahub`.
+
+### 2. Clone and set up the project
+
+```bash
+git clone https://github.com/<your-user>/lineageguard-datahub.git
+cd lineageguard-datahub
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+```
 
-# Unit tests (no DataHub required)
+### 3. Seed the demo ML pipeline into DataHub
+
+```bash
+python -m lineageguard.ingest
+```
+
+### 4. Run a security scan
+
+```bash
+python -m lineageguard.run_real
+```
+
+Expected output: a JSON report with three detected anomalies — version mismatch, tainted dataset, and shadow model.
+
+### 5. Launch the Streamlit demo
+
+```bash
+streamlit run lineageguard/app.py
+```
+
+Open http://localhost:8501, enter a seed URN (default provided), and click **Scan Lineage**.
+
+### 6. Run tests
+
+```bash
 pytest tests/test_agent.py -q
-
-# Synthetic demo (offline)
-python -m lineageguard.cli --demo
-
-# Full stack (local)
-# 1) datahub docker quickstart  → http://localhost:9002  (datahub/datahub)
-# 2) python -m lineageguard.ingest
-# 3) python -m lineageguard.run_real
-# 4) streamlit run lineageguard/app.py   → http://localhost:8501
 ```
 
-## Demo (live machine)
+## Project structure
 
-| Surface | URL |
-|--|--|
-| DataHub UI | http://localhost:9002 |
-| Streamlit | http://localhost:8501 |
-| FastAPI | `uvicorn lineageguard.api:app --port 8000` |
-
-See **[DEMO.md](DEMO.md)** for the 3-minute script and expected anomalies.
-
-## Project layout
-
-```text
+```
 lineageguard/
-  agent.py           # anomaly detection engine
-  datahub_client.py  # GraphQL lineage client
-  ingest.py          # load synthetic ML pipeline into DataHub
-  run_real.py        # end-to-end scan of live DataHub
-  api.py             # FastAPI
-  app.py             # Streamlit UI
-  cli.py             # CLI
-  explainer.py       # Markdown report + optional local LLM
-  demo_data.py       # synthetic graph for tests
-tests/test_agent.py
-examples/demo_lineage.json
+  agent.py          # Anomaly detection engine
+  datahub_client.py # DataHub GraphQL/REST client
+  ingest.py         # Seed synthetic ML pipeline into DataHub
+  run_real.py       # End-to-end DataHub scan
+  api.py            # FastAPI server
+  app.py            # Streamlit UI
+  cli.py            # Command-line interface
+  demo_data.py      # Synthetic pipeline for tests
+  explainer.py      # Markdown report + optional local LLM
+examples/
+  sample_report.md  # Sample output from a real scan
+tests/
+  test_agent.py     # pytest suite
 ```
 
-## Hackathon category
+## Technologies
 
-**Build agents for ML teams that protect models in production** using DataHub's end-to-end ML lineage.
+- DataHub (open-source context platform)
+- Python 3.9+
+- FastAPI + Uvicorn
+- Streamlit
+- pytest
+- Optional: Ollama-compatible local LLM for risk explanations
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](LICENSE).
