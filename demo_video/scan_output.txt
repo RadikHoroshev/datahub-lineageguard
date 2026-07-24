@@ -1,0 +1,58 @@
+DataHub health: True
+Fetched 7 nodes, 18 edges from DataHub
+{
+  "summary": {
+    "total_nodes": 7,
+    "total_edges": 18,
+    "anomalies_count": 3,
+    "critical": 1,
+    "high": 1,
+    "medium": 1,
+    "low": 0
+  },
+  "anomalies": [
+    {
+      "type": "version_mismatch",
+      "risk": "high",
+      "description": "Model fraud-detection-model version v1.2.3 deployed as v1.2.1",
+      "affected_urns": [
+        "urn:li:dataset:(urn:li:dataPlatform:mlflow,fraud-detection-model,PROD)",
+        "urn:li:dataset:(urn:li:dataPlatform:sagemaker,fraud-model-endpoint,PROD)"
+      ],
+      "evidence": {
+        "trained_version": "v1.2.3",
+        "deployed_version": "v1.2.1"
+      },
+      "recommendation": "Align deployment with trained model version or rollback."
+    },
+    {
+      "type": "tainted_dataset",
+      "risk": "critical",
+      "description": "Tainted dataset transactions-v2-poisoned feeds 5 downstream assets",
+      "affected_urns": [
+        "urn:li:dataset:(urn:li:dataPlatform:s3,transactions-v2-poisoned,PROD)",
+        "urn:li:dataset:(urn:li:dataPlatform:s3,fraud-features,PROD)",
+        "urn:li:dataset:(urn:li:dataPlatform:mlflow,fraud-detection-model,PROD)",
+        "urn:li:dataset:(urn:li:dataPlatform:feast,fraud-feature-table,PROD)",
+        "urn:li:dataset:(urn:li:dataPlatform:sagemaker,fraud-model-endpoint,PROD)",
+        "urn:li:dataset:(urn:li:dataPlatform:unregistered,shadow-fraud-model,PROD)"
+      ],
+      "evidence": {},
+      "recommendation": "Quarantine dataset and retrain downstream models."
+    },
+    {
+      "type": "shadow_model",
+      "risk": "medium",
+      "description": "Model shadow-fraud-model appears unregistered or shadow",
+      "affected_urns": [
+        "urn:li:dataset:(urn:li:dataPlatform:unregistered,shadow-fraud-model,PROD)"
+      ],
+      "evidence": {},
+      "recommendation": "Register model in approved model registry."
+    }
+  ]
+}
+
+/Users/radik/hackathons/datahub-lineageguard/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:lineageguard.agent:Loaded 7 nodes, 18 edges

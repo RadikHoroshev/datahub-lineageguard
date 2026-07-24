@@ -1,0 +1,13 @@
+file 'frame_001_title.png'
+duration 15
+file 'frame_002_problem.png'
+duration 15
+file 'frame_003_arch.png'
+duration 17
+file 'frame_004_cli.png'
+duration 17
+file 'frame_005_results.png'
+duration 20
+file 'frame_006_output.png'
+duration 15
+file 'frame_006_output.png'
