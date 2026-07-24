@@ -1,0 +1,36 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Local secrets / env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Runtime artifacts
+lineageguard_report.json
+*.log
+.streamlit/secrets.toml
+
+# Docker / DataHub local volumes (if mounted under repo)
+docker-compose.override.yml
+datahub_data/
