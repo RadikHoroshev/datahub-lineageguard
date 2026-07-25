@@ -34,3 +34,9 @@ lineageguard_report.json
 # Docker / DataHub local volumes (if mounted under repo)
 docker-compose.override.yml
 datahub_data/
+
+# Demo video assets (large binaries)
+demo_video/*.mp4
+demo_video/*.log
+demo_video/final_frames/
+demo_video/ui_screenshots/
