@@ -40,3 +40,7 @@ demo_video/*.mp4
 demo_video/*.log
 demo_video/final_frames/
 demo_video/ui_screenshots/
+# OAuth / local runtime secrets
+scripts/client_secret.json
+scripts/youtube_token.json
+scripts/client_secret_*.json
