@@ -35,11 +35,8 @@ lineageguard_report.json
 docker-compose.override.yml
 datahub_data/
 
-# Demo video assets (large binaries)
-demo_video/*.mp4
-demo_video/*.log
-demo_video/final_frames/
-demo_video/ui_screenshots/
+# Demo video assets (large binaries and generated artifacts)
+demo_video/
 # OAuth / local runtime secrets
 scripts/client_secret.json
 scripts/youtube_token.json
